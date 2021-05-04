@@ -6,6 +6,7 @@
 
 #ifndef SHARED_PROVIDER
 #include "core/common/common.h"
+#include <optional>
 #include "core/framework/op_kernel.h"
 #include "core/providers/cpu/containers.h"
 #include "core/util/math.h"
@@ -621,7 +622,7 @@ void CommonReduce2Loops(OpKernelContext* ctx,
 template <bool allow_multi_axes>
 class ReduceKernelBase {
  protected:
-  ReduceKernelBase(const OpKernelInfo& info, optional<int64_t> keepdims_override = {}) {
+  ReduceKernelBase(const OpKernelInfo& info, std::optional<int64_t> keepdims_override = {}) {
     if (allow_multi_axes) {
       axes_ = info.GetAttrsOrDefault<int64_t>("axes");
     } else {

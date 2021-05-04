@@ -56,8 +56,8 @@ void sort_expected_and_actual_buffers(std::vector<T>& expected,
 
 struct CheckParams {
   bool sort_output_;
-  optional<float> absolute_error_;
-  optional<float> relative_error_;
+  std::optional<float> absolute_error_;
+  std::optional<float> relative_error_;
 };
 
 inline CheckParams make_params(const OpTester::Data& d) {
@@ -499,7 +499,7 @@ void OpTester::SetOutputAbsErr(const char* name, float v) {
       std::find_if(output_data_.begin(), output_data_.end(),
                    [name](Data& data) { return (data.def_.Name() == name); });
   ORT_ENFORCE(it != output_data_.end());
-  it->absolute_error_ = optional<float>(v);
+  it->absolute_error_ = std::optional<float>(v);
 }
 
 void OpTester::SetOutputRelErr(const char* name, float v) {
@@ -507,7 +507,7 @@ void OpTester::SetOutputRelErr(const char* name, float v) {
       std::find_if(output_data_.begin(), output_data_.end(),
                    [name](Data& data) { return (data.def_.Name() == name); });
   ORT_ENFORCE(it != output_data_.end());
-  it->relative_error_ = optional<float>(v);
+  it->relative_error_ = std::optional<float>(v);
 }
 
 void OpTester::AddNodes(
@@ -1058,8 +1058,8 @@ void OpTester::AddReferenceOutputs(const std::string& model_path) {
 
     output_data_.push_back(Data(NodeArg(output_names[out_idx], &tmp_type_proto),
                                 std::move(subgraph_fetches[out_idx]),
-                                optional<float>(),
-                                optional<float>()));
+                                std::optional<float>(),
+                                std::optional<float>()));
   }
 }
 

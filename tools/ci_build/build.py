@@ -662,11 +662,7 @@ def generate_build_tree(cmake_path, source_dir, build_dir, cuda_home, cudnn_home
         # of them to get the best compatibility.
         "-DPython_EXECUTABLE=" + sys.executable,
         "-DPYTHON_EXECUTABLE=" + sys.executable,
-        "-Donnxruntime_USE_CUDA=" + ("ON" if args.use_cuda else "OFF"),
-        "-Donnxruntime_CUDA_VERSION=" + (args.cuda_version if args.use_cuda else ""),
         "-Donnxruntime_ROCM_VERSION=" + (args.rocm_version if args.use_rocm else ""),
-        "-Donnxruntime_CUDA_HOME=" + (cuda_home if args.use_cuda else ""),
-        "-Donnxruntime_CUDNN_HOME=" + (cudnn_home if args.use_cuda else ""),
         "-Donnxruntime_USE_FEATURIZERS=" + ("ON" if args.use_featurizers else "OFF"),
         "-Donnxruntime_USE_MIMALLOC_STL_ALLOCATOR=" + (
             "ON" if args.use_mimalloc == "stl" or args.use_mimalloc == "all" else "OFF"),
@@ -752,7 +748,10 @@ def generate_build_tree(cmake_path, source_dir, build_dir, cuda_home, cudnn_home
         "-Donnxruntime_ENABLE_WEBASSEMBLY_DEBUG_INFO=" + ("ON" if args.enable_wasm_debug_info else "OFF"),
         "-Donnxruntime_ENABLE_EAGER_MODE=" + ("ON" if args.build_eager_mode else "OFF"),
     ]
-
+    if args.use_cuda:
+        cmake_args += ["-Donnxruntime_USE_CUDA=ON", "-Donnxruntime_CUDA_VERSION=" + args.cuda_version,
+                       "-Donnxruntime_CUDA_HOME="+cudnn_home ,
+                       "-Donnxruntime_CUDNN_HOME="+cudnn_home]
     if args.enable_msvc_static_runtime:
         cmake_args += ["-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>",
                        "-DONNX_USE_MSVC_STATIC_RUNTIME=ON",

@@ -4,7 +4,7 @@
 #pragma once
 
 #include "core/common/logging/logging.h"
-#include "core/common/optional.h"
+#include <optional>
 #include "core/framework/allocatormgr.h"
 #include "core/framework/customregistry.h"
 #include "core/framework/execution_frame.h"
@@ -281,8 +281,8 @@ class OpTester {
     OrtValue value;
     value.Init(ptr.get(), mltype, mltype->GetDeleteFunc());
     ptr.release();
-    input_data_.push_back(Data(NodeArg(name, mltype->GetTypeProto()), std::move(value), optional<float>(),
-                               optional<float>()));
+    input_data_.push_back(Data(NodeArg(name, mltype->GetTypeProto()), std::move(value), std::optional<float>(),
+                               std::optional<float>()));
   }
 
   template <typename T>
@@ -293,8 +293,8 @@ class OpTester {
     OrtValue value;
     value.Init(ptr.get(), mltype, mltype->GetDeleteFunc());
     ptr.release();
-    input_data_.push_back(Data(NodeArg(name, mltype->GetTypeProto()), std::move(value), optional<float>(),
-                               optional<float>()));
+    input_data_.push_back(Data(NodeArg(name, mltype->GetTypeProto()), std::move(value), std::optional<float>(),
+                               std::optional<float>()));
   }
 
   template <typename T>
@@ -314,14 +314,14 @@ class OpTester {
     value.Init(ptr.release(), DataTypeImpl::GetType<std::map<TKey, TVal>>(),
                DataTypeImpl::GetType<std::map<TKey, TVal>>()->GetDeleteFunc());
     input_data_.push_back(Data(NodeArg(name, &MMapType<TKey, TVal>::s_map_type_proto.proto), std::move(value),
-                               optional<float>(), optional<float>()));
+                               std::optional<float>(), std::optional<float>()));
   }
 
   template <typename T>
   void AddMissingOptionalInput() {
     std::string name;  // empty == input doesn't exist
-    input_data_.push_back(Data(NodeArg(name, &TTensorType<T>::s_type_proto.proto), OrtValue(), optional<float>(),
-                               optional<float>()));
+    input_data_.push_back(Data(NodeArg(name, &TTensorType<T>::s_type_proto.proto), OrtValue(), std::optional<float>(),
+                               std::optional<float>()));
   }
 
   template <typename T>
@@ -349,8 +349,8 @@ class OpTester {
   template <typename T>
   void AddMissingOptionalOutput() {
     std::string name;  // empty == input doesn't exist
-    output_data_.push_back(Data(NodeArg(name, &TTensorType<T>::s_type_proto.proto), OrtValue(), optional<float>(),
-                                optional<float>()));
+    output_data_.push_back(Data(NodeArg(name, &TTensorType<T>::s_type_proto.proto), OrtValue(), std::optional<float>(),
+                                std::optional<float>()));
   }
 
   // Add other registered types, possibly experimental
@@ -362,8 +362,8 @@ class OpTester {
     OrtValue value;
     value.Init(ptr.get(), mltype, mltype->GetDeleteFunc());
     ptr.release();
-    output_data_.push_back(Data(NodeArg(name, mltype->GetTypeProto()), std::move(value), optional<float>(),
-                                optional<float>()));
+    output_data_.push_back(Data(NodeArg(name, mltype->GetTypeProto()), std::move(value), std::optional<float>(),
+                                std::optional<float>()));
   }
 
   template <typename T>
@@ -374,8 +374,8 @@ class OpTester {
     OrtValue value;
     value.Init(ptr.get(), mltype, mltype->GetDeleteFunc());
     ptr.release();
-    output_data_.push_back(Data(NodeArg(name, mltype->GetTypeProto()), std::move(value), optional<float>(),
-                                optional<float>()));
+    output_data_.push_back(Data(NodeArg(name, mltype->GetTypeProto()), std::move(value), std::optional<float>(),
+                                std::optional<float>()));
   }
 
   // Add non tensor output
@@ -386,7 +386,7 @@ class OpTester {
     ml_value.Init(ptr.release(), DataTypeImpl::GetType<std::vector<std::map<TKey, TVal>>>(),
                   DataTypeImpl::GetType<std::vector<std::map<TKey, TVal>>>()->GetDeleteFunc());
     output_data_.push_back(Data(NodeArg(name, &VectorOfMapType<TKey, TVal>::s_vec_map_type_proto.proto), std::move(ml_value),
-                                optional<float>(), optional<float>()));
+                                std::optional<float>(), std::optional<float>()));
   }
 
   // Generate the reference outputs with the model file
@@ -466,10 +466,10 @@ class OpTester {
   struct Data {
     onnxruntime::NodeArg def_;
     OrtValue data_;
-    optional<float> relative_error_;
-    optional<float> absolute_error_;
+    std::optional<float> relative_error_;
+    std::optional<float> absolute_error_;
     bool sort_output_;
-    Data(onnxruntime::NodeArg&& def, OrtValue&& data, optional<float>&& rel, optional<float>&& abs,
+    Data(onnxruntime::NodeArg&& def, OrtValue&& data, std::optional<float>&& rel, std::optional<float>&& abs,
          bool sort_output = false)
         : def_(std::move(def)),
           data_(std::move(data)),
@@ -584,8 +584,8 @@ class OpTester {
         node_arg.SetShape(new_shape);
       }
 
-      optional<float> rel;
-      optional<float> abs;
+      std::optional<float> rel;
+      std::optional<float> abs;
 
       if (rel_error != 0.0f) {
         rel = rel_error;
@@ -639,7 +639,7 @@ class OpTester {
     value.Init(ptr.get(), mltype, mltype->GetDeleteFunc());
     ptr.release();
     data.push_back(Data(NodeArg(name, &SequenceTensorType<T>::s_sequence_tensor_type_proto.proto), std::move(value),
-                        optional<float>(), optional<float>()));
+                        std::optional<float>(), std::optional<float>()));
   }
 
   const char* domain_;
