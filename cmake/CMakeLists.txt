@@ -772,7 +772,7 @@ if(onnxruntime_PREFER_SYSTEM_LIB)
 endif()
 if(NOT TARGET re2::re2)
   add_subdirectory(external/re2 EXCLUDE_FROM_ALL)
-  set_target_properties(re2::re2 PROPERTIES FOLDER "External/re2")
+  set_target_properties(re2 PROPERTIES FOLDER "External/re2")
   set(RE2_INCLUDE_DIR ${REPO_ROOT}/cmake/external/re2)
 endif()
 
