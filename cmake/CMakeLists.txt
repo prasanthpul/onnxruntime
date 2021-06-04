@@ -33,7 +33,7 @@ include(CheckCXXCompilerFlag)
 include(CheckLanguage)
 include(CMakeDependentOption)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # NOTE: POSITION INDEPENDENT CODE hurts performance, and it only make sense on POSIX systems
