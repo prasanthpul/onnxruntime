@@ -12,7 +12,6 @@
 #include "core/util/math.h"
 #endif
 #include "core/util/math_cpuonly.h"
-#include "core/common/optional.h"
 #include "core/platform/threadpool.h"
 #include "core/common/safeint.h"
 #include <cmath>
