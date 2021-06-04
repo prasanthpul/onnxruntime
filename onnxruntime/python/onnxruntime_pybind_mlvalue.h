@@ -45,6 +45,8 @@ int OnnxRuntimeTensorToNumpyType(const DataTypeImpl* tensor_type);
 
 MLDataType NumpyTypeToOnnxRuntimeType(int numpy_type);
 
+MLDataType NumpyToOnnxRuntimeTensorType(int numpy_type);
+
 using MemCpyFunc = void (*)(void*, const void*, size_t);
 
 void CpuToCpuMemCpy(void*, const void*, size_t);
@@ -59,6 +61,7 @@ void AddNonTensorAsPyObj(const OrtValue& val, std::vector<pybind11::object>& pyo
                          const DataTransferManager* data_transfer_manager,
                          const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* mem_cpy_to_host_functions);
 
+OrtMemoryInfo GetMemoryInfoPerDeviceType(const OrtDevice& ort_device);
 
 #ifdef USE_CUDA
 
@@ -71,6 +74,8 @@ const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetCudaToHostMemCpy
 bool IsCudaDeviceIdValid(const onnxruntime::logging::Logger& logger, int id);
 
 AllocatorPtr GetCudaAllocator(OrtDevice::DeviceId id);
+
+std::unique_ptr<IDataTransfer> GetGPUDataTransfer();
 
 #endif
 

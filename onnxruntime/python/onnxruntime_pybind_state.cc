@@ -785,6 +785,9 @@ void addGlobalMethods(py::module& m, Environment& env) {
             break;
 #ifdef USE_CUDA
           case OrtDevice::GPU:
+            if (!IsCudaDeviceIdValid(logging::LoggingManager::DefaultLogger(), ort_device.Id())) {
+              ORT_THROW("The provided device id doesn't match any available GPUs on the machine: ", ort_device.Id());
+            }
             allocator = GetCudaAllocator(ort_device.Id());
             cpy_func = CpuToCudaMemCpy;
             break;
