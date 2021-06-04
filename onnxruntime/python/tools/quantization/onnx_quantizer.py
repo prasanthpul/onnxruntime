@@ -62,6 +62,7 @@ class ONNXQuantizer:
         self.nodes_to_exclude = nodes_to_exclude  # specific nodes to exclude
         self.op_types_to_quantize = op_types_to_quantize
         self.new_nodes = []
+        self.parent = None
 
         self.opset_version = self.check_opset_version()
 
@@ -84,6 +85,54 @@ class ONNXQuantizer:
         # some output from nodes will be quantized, yet itself should be treat as existing so
         # no dequantized will be applied when needed later
         self.generated_value_names = {}
+
+    # routines for subgraph support
+    def quantize_subgraph(self, subgraph):
+        '''
+            generate submodel for the subgraph, so that we re-utilize current quantization implementation.
+            quantize the submodel
+            update subgraph and set it back to node
+        '''
+        warped_subgraph = onnx_proto.GraphProto()
+        warped_subgraph.CopyFrom(subgraph)
+        warped_model = onnx.helper.make_model(warped_subgraph, producer_name='onnx-quantizer',
+                                              opset_imports=self.model.model.opset_import)
+        sub_quanitzer = ONNXQuantizer(warped_model,
+                                      self.per_channel,
+                                      self.reduce_range,
+                                      self.mode,
+                                      self.static,
+                                      self.weight_qType,
+                                      self.input_qType,
+                                      self.tensors_range,
+                                      self.nodes_to_quantize,
+                                      self.nodes_to_exclude,
+                                      self.op_types_to_quantize,
+                                      self.extra_options)
+        sub_quanitzer.quantize_model()
+        return sub_quanitzer.model.model.graph
+
+    def quantize_node_with_sub_graph(self, node):
+        '''
+        Check subgraph, if any, quantize it and repleace it.
+        return new_nodes added for quantizing subgraph
+        '''
+        graph_attrs = [attr for attr in node.attribute if attr.type == 5 or attr.type == 10]
+        if len(graph_attrs) == 0:
+            return node
+        kwargs = {}
+        for attr in node.attribute:
+            if attr.type == 5:
+                kv = {attr.name: self.quantize_subgraph(attr.g)}
+            elif attr.type == 10:
+                value = []
+                for subgraph in attr.graphs:
+                    value.extend([self.quantize_subgraph(subgraph)])
+                kv = {attr.name: value}
+            else:
+                kv = attribute_to_kwarg(attr)
+            kwargs.update(kv)
+        return onnx.helper.make_node(node.op_type, node.input, node.output, name=node.name, **kwargs)
 
     def check_opset_version(self):
         ai_onnx_domain = [
@@ -195,10 +244,19 @@ class ONNXQuantizer:
 
         return True
 
+    def add_new_nodes(self, nodes):
+        self.new_nodes.extend(nodes)
+        for node in nodes:
+            for output_name in node.output:
+                self.generated_value_names.update({output_name: 1})
+
     def quantize_model(self):
         self.remove_fake_quantized_nodes()
 
         for node in self.model.nodes():
+            # quantize subgraphes if have
+            node = self.quantize_node_with_sub_graph(node)
+
             number_of_existing_new_nodes = len(self.new_nodes)
             if self.should_quantize(node):
                 op_quantizer = CreateOpQuantizer(self, node)
@@ -208,7 +266,7 @@ class ONNXQuantizer:
             op_quantizer.quantize()
             for i in range(number_of_existing_new_nodes, len(self.new_nodes)):
                 for output_name in self.new_nodes[i].output:
-                    self.generated_value_names.update({output_name : 1})
+                    self.generated_value_names.update({output_name: 1})
 
         self._dequantize_outputs()
 
@@ -597,7 +655,13 @@ class ONNXQuantizer:
 
         return quantized_bias_name
 
-    def quantize_inputs(self, node, indices, initializer_use_weight_qType=True, reduce_range=False, op_level_per_channel=False, axis=-1):
+    def contains_tensor(self, tensor_name):
+        '''
+        only check for value info and newly generated tensor names, initializers are checked seperately
+        '''
+        return (tensor_name in self.value_infos) or (tensor_name in self.generated_value_names)
+
+    def quantize_inputs(self, node, indices, initializer_use_weight_qType=True, reduce_range=False, op_level_per_channel=False, axis=-1, from_subgraph=False):
         '''
         Given a node, this function quantizes the inputs as follows:
             - If input is an initializer, quantize the initializer data, replace old initializer
@@ -642,13 +706,16 @@ class ONNXQuantizer:
                 quantized_input_names.append(q_weight_name)
                 zero_point_names.append(zp_name)
                 scale_names.append(scale_name)
-            else:
+            elif self.contains_tensor(node_input):
                 # Add QuantizeLinear node.
                 qlinear_node = self.model.find_node_by_name(node_input + "_QuantizeLinear", self.new_nodes,
                                                             self.model.graph())
                 if qlinear_node is None:
                     quantize_input_nodes = self._get_quantize_input_nodes(node, input_index, self.input_qType)
-                    nodes.extend(quantize_input_nodes)
+                    if from_subgraph:
+                        self.add_new_nodes(quantize_input_nodes)
+                    else:
+                        nodes.extend(quantize_input_nodes)
                     qlinear_node = quantize_input_nodes[-1]
 
                 if qlinear_node.op_type == "QuantizeLinear":
@@ -659,6 +726,21 @@ class ONNXQuantizer:
                     quantized_input_names.append(qlinear_node.output[0])
                     scale_names.append(qlinear_node.output[1])
                     zero_point_names.append(qlinear_node.output[2])
+            elif self.parent is not None:
+                (parent_quantized_input_names, parent_zero_point_names, parent_scale_names, _) = self.parent.quantize_inputs(
+                    node,
+                    [input_index],
+                    initializer_use_weight_qType=initializer_use_weight_qType,
+                    reduce_range=reduce_range,
+                    op_level_per_channel=op_level_per_channel,
+                    axis=axis,
+                    from_subgraph=True)
+                quantized_input_names.append(parent_quantized_input_names[0])
+                scale_names.append(parent_scale_names[0])
+                zero_point_names.append(parent_zero_point_names[0])
+                # node should not be add this child level here
+            else:
+                raise('Invalid tensor name to quantize: {}'.format(node_input))
 
         return (quantized_input_names, zero_point_names, scale_names, nodes)
 
